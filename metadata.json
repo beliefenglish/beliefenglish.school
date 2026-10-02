@@ -1,6 +1,6 @@
 {
   "name": "Trung tâm Ngoại ngữ Niềm Tin - Belief English",
   "description": "Trung tâm Ngoại ngữ Niềm Tin (Belief English - Member of BELIS GROUP). Tiên phong tri thức, hậu vận thành công với phương pháp độc quyền BAC.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

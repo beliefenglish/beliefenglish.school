@@ -11,10 +11,10 @@ import {
   Bot,
   User,
   RotateCcw,
-  CheckCircle,
-  HelpCircle,
   Headphones,
-  Award,
+  AlertCircle,
+  Info,
+  Check,
   ChevronDown,
 } from 'lucide-react';
 
@@ -33,6 +33,7 @@ export default function SpeakingChatbot() {
   const [autoSpeech, setAutoSpeech] = useState(true);
   const [level, setLevel] = useState<string>('Cambridge YLE (Starters - Flyers)');
   const [selectedTopic, setSelectedTopic] = useState<string>('Giao tiếp đời sống hàng ngày');
+  const [micNotice, setMicNotice] = useState<{ message: string; type: 'warning' | 'info' } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -55,78 +56,153 @@ export default function SpeakingChatbot() {
     'Đóng vai mua sắm & hỏi đường',
   ];
 
-  // Initialize Speech Recognition if supported
+  const quickSpeakingPrompts = [
+    'Hello teacher! My name is Alex.',
+    'I love playing soccer and reading books.',
+    'Can you practice Cambridge Starters with me?',
+    'What is your favorite animal and why?',
+  ];
+
+  // Initialize Speech Recognition safely
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
     if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
 
-      recognition.onstart = () => {
-        setIsRecording(true);
-      };
+        recognition.onstart = () => {
+          setIsRecording(true);
+          setMicNotice(null);
+        };
 
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputMessage(transcript);
-        setIsRecording(false);
-      };
+        recognition.onresult = (event: any) => {
+          if (event.results && event.results[0] && event.results[0][0]) {
+            const transcript = event.results[0][0].transcript;
+            setInputMessage(transcript);
+          }
+          setIsRecording(false);
+        };
 
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
-      };
+        recognition.onerror = (event: any) => {
+          setIsRecording(false);
+          const errCode = event?.error;
 
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
+          // Safe, informative user notices instead of console.error
+          if (errCode === 'not-allowed' || errCode === 'service-not-allowed') {
+            setMicNotice({
+              message:
+                'Microphone chưa được cấp quyền trên trình duyệt (hoặc cửa sổ xem trước). Bạn có thể bấm biểu tượng ổ khóa 🔒 trên thanh địa chỉ để cấp quyền Micro, hoặc gõ phím trực tiếp vào ô chat để luyện Speaking!',
+              type: 'warning',
+            });
+          } else if (errCode === 'no-speech') {
+            setMicNotice({
+              message: 'Chưa nhận được âm thanh. Hãy nói to, rõ ràng hơn và bấm lại nút micro nhé!',
+              type: 'info',
+            });
+          } else if (errCode === 'audio-capture') {
+            setMicNotice({
+              message: 'Không tìm thấy thiết bị Microphone kết nối với máy tính/điện thoại.',
+              type: 'warning',
+            });
+          } else if (errCode !== 'aborted') {
+            setMicNotice({
+              message: 'Tạm thời không thể thu âm qua micro. Bạn có thể gõ nội dung vào khung chat.',
+              type: 'info',
+            });
+          }
+          console.warn('Speech recognition status notice:', errCode);
+        };
 
-      recognitionRef.current = recognition;
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+      } catch (initErr) {
+        console.warn('Could not initialize SpeechRecognition:', initErr);
+      }
     }
   }, []);
 
   // Text-To-Speech function
   const speakText = (text: string) => {
     if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
+    try {
+      window.speechSynthesis.cancel();
 
-    // Clean text of emojis and symbols for speech
-    const cleanText = text.replace(/[*#💡🌟👋]/g, '');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9; // Slightly slower for language learners
-    utterance.pitch = 1.05;
+      // Clean text of emojis and symbols for natural speech
+      const cleanText = text.replace(/[*#💡🌟👋🚀👏]/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.92; // Slightly measured rate for ESL students
+      utterance.pitch = 1.05;
 
-    // Pick an English voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(
-      v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha'))
-    ) || voices.find(v => v.lang.startsWith('en'));
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice =
+        voices.find(
+          v =>
+            v.lang.startsWith('en') &&
+            (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Karen'))
+        ) || voices.find(v => v.lang.startsWith('en'));
 
-    if (englishVoice) {
-      utterance.voice = englishVoice;
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis error:', e);
     }
-
-    window.speechSynthesis.speak(utterance);
   };
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (!recognitionRef.current) {
-      alert('Trình duyệt của bạn chưa hỗ trợ nhận diện giọng nói Web Speech. Bạn có thể gõ nội dung vào ô nhập.');
+      setMicNotice({
+        message:
+          'Trình duyệt này không hỗ trợ Web Speech API trực tiếp. Bạn có thể gõ phím trực tiếp vào ô chat để trò chuyện với Belief AI.',
+        type: 'info',
+      });
       return;
     }
 
     if (isRecording) {
-      recognitionRef.current.stop();
-    } else {
       try {
-        recognitionRef.current.start();
-      } catch (e) {
-        console.error('Failed to start speech recognition', e);
+        recognitionRef.current.stop();
+      } catch (err) {
+        console.warn('Error stopping recognition:', err);
       }
+      setIsRecording(false);
+      return;
+    }
+
+    setMicNotice(null);
+
+    // Request microphone permission explicitly via getUserMedia to prompt user cleanly
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Release stream so Web Speech API has exclusive access
+        stream.getTracks().forEach(track => track.stop());
+      } catch (permErr: any) {
+        console.warn('Microphone permission check returned:', permErr?.name || permErr);
+        setMicNotice({
+          message:
+            'Quyền truy cập Microphone bị từ chối hoặc bị hạn chế. Bạn hãy nhấn vào biểu tượng ổ khóa 🔒 trên thanh địa chỉ duyệt web để Cho phép (Allow) Microphone, hoặc gõ tin nhắn trực tiếp vào ô chat nhé!',
+          type: 'warning',
+        });
+        return;
+      }
+    }
+
+    try {
+      recognitionRef.current.start();
+    } catch (startErr: any) {
+      console.warn('Speech recognition start note:', startErr?.message || startErr);
     }
   };
 
@@ -250,7 +326,7 @@ export default function SpeakingChatbot() {
 
       {/* Chat Window (Bottom Left) */}
       {isOpen && (
-        <div className="fixed bottom-6 left-6 z-50 w-[350px] sm:w-[400px] h-[550px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-6 left-6 z-50 w-[350px] sm:w-[410px] h-[580px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
           <div className="bg-gradient-to-r from-[#1e3a8a] via-blue-900 to-[#172554] text-white p-4 flex items-center justify-between shrink-0 shadow-md">
             <div className="flex items-center gap-2.5">
@@ -294,6 +370,7 @@ export default function SpeakingChatbot() {
                       timestamp: 'Vừa xong',
                     },
                   ]);
+                  setMicNotice(null);
                 }}
                 className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 title="Làm mới cuộc trò chuyện"
@@ -406,8 +483,49 @@ export default function SpeakingChatbot() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Quick Prompts Suggestions */}
+          <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto text-[10px] scrollbar-none">
+            <span className="text-slate-400 font-bold shrink-0">💡 Gợi ý câu:</span>
+            {quickSpeakingPrompts.map((prompt, pIdx) => (
+              <button
+                key={pIdx}
+                onClick={() => setInputMessage(prompt)}
+                className="px-2 py-0.5 rounded-full bg-white hover:bg-orange-50 text-slate-700 hover:text-orange-600 border border-slate-200 hover:border-orange-300 whitespace-nowrap cursor-pointer transition-colors"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+
           {/* Input Area */}
           <div className="p-3 bg-white border-t border-slate-200">
+            {/* Friendly Microphone Notice / Alert */}
+            {micNotice && (
+              <div
+                className={`mb-2 px-3 py-2 rounded-xl text-xs flex items-start justify-between gap-2 shadow-xs ${
+                  micNotice.type === 'warning'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                    : 'bg-blue-50 border border-blue-200 text-blue-900'
+                }`}
+              >
+                <div className="flex items-start gap-1.5 flex-1">
+                  {micNotice.type === 'warning' ? (
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  )}
+                  <span className="leading-snug">{micNotice.message}</span>
+                </div>
+                <button
+                  onClick={() => setMicNotice(null)}
+                  className="p-0.5 hover:bg-black/5 rounded text-slate-500 hover:text-slate-800 cursor-pointer shrink-0"
+                  title="Đóng thông báo"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {isRecording && (
               <div className="mb-2 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between animate-pulse">
                 <span className="flex items-center gap-1.5 font-bold">
@@ -418,7 +536,7 @@ export default function SpeakingChatbot() {
                   onClick={toggleRecording}
                   className="text-xs font-black underline text-red-800 cursor-pointer"
                 >
-                  Xong
+                  Dừng
                 </button>
               </div>
             )}
@@ -463,7 +581,7 @@ export default function SpeakingChatbot() {
               </button>
             </form>
             <p className="text-[10px] text-center text-slate-400 mt-1.5">
-              💡 Bấm vào biểu tượng Microphone để luyện nói trực tiếp bằng tiếng Anh.
+              💡 Bấm biểu tượng Mic để nói, hoặc gõ phím và bấm gửi để AI phản hồi & đọc to.
             </p>
           </div>
         </div>

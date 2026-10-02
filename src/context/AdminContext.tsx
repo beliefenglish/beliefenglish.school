@@ -370,7 +370,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_admin_auth', JSON.stringify(adminAuth));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [adminAuth]);
 
@@ -378,7 +378,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_admin_pwd', storedPassword);
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [storedPassword]);
 
@@ -486,7 +486,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_courses', JSON.stringify(courses));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [courses]);
 
@@ -494,7 +494,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_leads', JSON.stringify(leads));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [leads]);
 
@@ -502,7 +502,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_settings', JSON.stringify(siteSettings));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [siteSettings]);
 
@@ -510,7 +510,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_media', JSON.stringify(siteMedia));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [siteMedia]);
 
@@ -518,7 +518,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_folders', JSON.stringify(libraryFolders));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [libraryFolders]);
 
@@ -526,7 +526,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem('belis_books', JSON.stringify(libraryBooks));
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }, [libraryBooks]);
 

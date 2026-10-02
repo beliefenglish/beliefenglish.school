@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Brain,
   Zap,
@@ -15,6 +15,8 @@ import {
   Clock,
   ArrowRight,
   ChevronRight,
+  ChevronDown,
+  FileText,
   Star,
   Gamepad2,
   Cpu,
@@ -49,6 +51,22 @@ import campusClassroomImg from './assets/images/belief_campus_classroom_17909502
 function LandingPageContent() {
   const { siteSettings, isAdminView, setIsAdminView, addLead } = useAdmin();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNavDropdownOpen, setIsNavDropdownOpen] = useState(false);
+  const [isMobileSubmenuOpen, setIsMobileSubmenuOpen] = useState(true);
+  const navDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (navDropdownRef.current && !navDropdownRef.current.contains(event.target as Node)) {
+        setIsNavDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const [activeEdTechTab, setActiveEdTechTab] = useState<'kahoot' | 'ai' | 'ipevo'>('kahoot');
   const [activeBacTab, setActiveBacTab] = useState<'believe' | 'active' | 'control'>('believe');
   
@@ -138,8 +156,8 @@ function LandingPageContent() {
               <BeliefLogo variant="blue" size="md" />
             </a>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex items-center gap-6 text-sm font-semibold text-slate-600">
+            {/* Desktop Navigation Links (Clean & Organized) */}
+            <div className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
               <a href="#trang-chu" className="hover:text-[#1e3a8a] transition-colors py-1">
                 Trang chủ
               </a>
@@ -152,28 +170,141 @@ function LandingPageContent() {
               <a href="#khoa-hoc" className="hover:text-[#1e3a8a] transition-colors py-1">
                 Khóa học & Lộ trình
               </a>
-              <a href="#thu-vien" className="hover:text-[#1e3a8a] transition-colors py-1">
-                Thư viện sách
-              </a>
-              <a href="#bang-tu-van" className="hover:text-[#1e3a8a] transition-colors py-1">
-                Bảng tư vấn
-              </a>
-              <a href="#edtech" className="hover:text-[#1e3a8a] transition-colors py-1">
-                EdTech
-              </a>
+
+              {/* DROPDOWN MENU: Tiện ích & Hệ thống (Thư viện sách, Bảng tư vấn, EdTech, Dashboard) */}
+              <div
+                className="relative py-2"
+                ref={navDropdownRef}
+                onMouseEnter={() => setIsNavDropdownOpen(true)}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsNavDropdownOpen(!isNavDropdownOpen)}
+                  className={`inline-flex items-center gap-1.5 py-1 text-sm font-semibold transition-colors cursor-pointer select-none ${
+                    isNavDropdownOpen ? 'text-[#1e3a8a]' : 'text-slate-600 hover:text-[#1e3a8a]'
+                  }`}
+                  aria-expanded={isNavDropdownOpen}
+                >
+                  <span>Tiện ích & Hệ thống</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      isNavDropdownOpen ? 'rotate-180 text-[#1e3a8a]' : 'text-slate-400'
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Card */}
+                {isNavDropdownOpen && (
+                  <div
+                    onMouseLeave={() => setIsNavDropdownOpen(false)}
+                    className="absolute left-1/2 -translate-x-1/2 top-full w-80 pt-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  >
+                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-2 space-y-1">
+                      {/* 1. Thư viện sách */}
+                      <a
+                        href="#thu-vien"
+                        onClick={() => setIsNavDropdownOpen(false)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/80 transition-colors group cursor-pointer"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-blue-100 text-[#1e3a8a] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform mt-0.5">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <div className="text-left flex-1 min-w-0">
+                          <div className="text-xs font-bold text-slate-800 group-hover:text-[#1e3a8a] transition-colors">
+                            Thư viện sách
+                          </div>
+                          <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                            Giáo trình số & tài liệu học Oxford, Cambridge
+                          </div>
+                        </div>
+                      </a>
+
+                      {/* 2. Bảng tư vấn */}
+                      <a
+                        href="#bang-tu-van"
+                        onClick={() => setIsNavDropdownOpen(false)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/80 transition-colors group cursor-pointer"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform mt-0.5">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="text-left flex-1 min-w-0">
+                          <div className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">
+                            Bảng tư vấn
+                          </div>
+                          <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                            Quy trình tư vấn & lộ trình học tập BAC 1-1
+                          </div>
+                        </div>
+                      </a>
+
+                      {/* 3. EdTech */}
+                      <a
+                        href="#edtech"
+                        onClick={() => setIsNavDropdownOpen(false)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-purple-50/80 transition-colors group cursor-pointer"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform mt-0.5">
+                          <Cpu className="w-4 h-4" />
+                        </div>
+                        <div className="text-left flex-1 min-w-0">
+                          <div className="text-xs font-bold text-slate-800 group-hover:text-purple-700 transition-colors">
+                            EdTech & Công nghệ
+                          </div>
+                          <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                            Học tương tác 4.0 (Kahoot, AI, Ipevo)
+                          </div>
+                        </div>
+                      </a>
+
+                      {/* Divider */}
+                      <div className="my-1 border-t border-slate-100"></div>
+
+                      {/* 4. Dashboard */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsNavDropdownOpen(false);
+                          setIsAdminView(true);
+                        }}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-orange-50/80 transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-start gap-3 text-left flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform mt-0.5">
+                            <LayoutDashboard className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-800 group-hover:text-orange-600 flex items-center gap-1.5 transition-colors">
+                              <span>Dashboard Quản Trị</span>
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-orange-100 text-orange-600 border border-orange-200">
+                                Admin
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 leading-tight mt-0.5">
+                              Cổng quản lý nội dung & học viên
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <a href="#lien-he" className="hover:text-[#1e3a8a] transition-colors py-1">
                 Liên hệ
               </a>
             </div>
 
-            {/* Action CTA, Hotline & Dashboard Toggle */}
+            {/* Action CTA & Hotline */}
             <div className="hidden sm:flex items-center gap-3">
               <a
                 href={`tel:${cleanPhone(siteSettings.hotline1)}`}
-                className="hidden xl:flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-[#1e3a8a]"
+                className="hidden xl:flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-[#1e3a8a] py-1.5 px-3 rounded-xl hover:bg-slate-100 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-blue-50 text-[#1e3a8a] flex items-center justify-center">
-                  <Phone className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-full bg-blue-50 text-[#1e3a8a] flex items-center justify-center">
+                  <Phone className="w-3.5 h-3.5" />
                 </div>
                 <span>Hotline: {siteSettings.hotline1}</span>
               </a>
@@ -185,27 +316,10 @@ function LandingPageContent() {
                 <Sparkles className="w-3.5 h-3.5 mr-1.5" />
                 <span>Đăng ký Test</span>
               </button>
-
-              {/* Admin Dashboard Switcher Button */}
-              <button
-                onClick={() => setIsAdminView(true)}
-                title="Mở Bảng Quản Trị Website"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 hover:text-[#1e3a8a] bg-slate-100 hover:bg-blue-50 rounded-xl border border-slate-200 transition-colors cursor-pointer"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 text-[#1e3a8a]" />
-                <span className="hidden md:inline">Dashboard</span>
-              </button>
             </div>
 
-            {/* Mobile Menu & Dashboard Buttons */}
+            {/* Mobile Menu Toggle Button */}
             <div className="flex lg:hidden items-center gap-2">
-              <button
-                onClick={() => setIsAdminView(true)}
-                className="px-2.5 py-1.5 text-[11px] font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200 flex items-center gap-1"
-              >
-                <LayoutDashboard className="w-3 h-3 text-[#1e3a8a]" />
-                <span>Admin</span>
-              </button>
               <button
                 onClick={handleGeneralModalOpen}
                 className="px-3 py-1.5 text-xs font-bold text-white bg-orange-500 rounded-lg shadow-sm"
@@ -214,7 +328,7 @@ function LandingPageContent() {
               </button>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-slate-700 hover:text-[#1e3a8a] focus:outline-none"
+                className="p-2 text-slate-700 hover:text-[#1e3a8a] focus:outline-none cursor-pointer"
                 aria-label="Toggle Navigation"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -223,85 +337,119 @@ function LandingPageContent() {
           </div>
         </div>
 
-        {/* Mobile Dropdown */}
+        {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-xl">
+          <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-2 shadow-xl animate-in fade-in duration-200">
             <a
               href="#trang-chu"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
+              className="block px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl"
             >
               Trang chủ
             </a>
             <a
               href="#ve-belis"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
+              className="block px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl"
             >
               Về BELIS
             </a>
             <a
               href="#phuong-phap-bac"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
+              className="block px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl"
             >
               Phương pháp BAC
             </a>
             <a
               href="#khoa-hoc"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
+              className="block px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl"
             >
               Khóa học & Lộ trình
             </a>
-            <a
-              href="#thu-vien"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
-            >
-              Thư viện sách & Tài liệu
-            </a>
-            <a
-              href="#bang-tu-van"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
-            >
-              Bảng tư vấn
-            </a>
-            <a
-              href="#edtech"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
-            >
-              EdTech
-            </a>
+
+            {/* Mobile Dropdown / Collapsible: Tiện ích & Hệ thống */}
+            <div className="rounded-xl border border-slate-200/80 overflow-hidden bg-slate-50/60 my-1">
+              <button
+                type="button"
+                onClick={() => setIsMobileSubmenuOpen(!isMobileSubmenuOpen)}
+                className="w-full px-3 py-2.5 flex items-center justify-between text-sm font-bold text-[#1e3a8a] bg-blue-50/50 cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-orange-500" />
+                  <span>Tiện ích & Hệ thống</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isMobileSubmenuOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {isMobileSubmenuOpen && (
+                <div className="p-2 space-y-1 bg-white border-t border-slate-200/60">
+                  <a
+                    href="#thu-vien"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 rounded-lg cursor-pointer"
+                  >
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                    <span>Thư viện sách</span>
+                  </a>
+                  <a
+                    href="#bang-tu-van"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-emerald-600" />
+                    <span>Bảng tư vấn</span>
+                  </a>
+                  <a
+                    href="#edtech"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-purple-50 rounded-lg cursor-pointer"
+                  >
+                    <Cpu className="w-4 h-4 text-purple-600" />
+                    <span>EdTech & Công nghệ</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setIsAdminView(true);
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-2 text-xs font-bold text-orange-600 hover:bg-orange-50 rounded-lg cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <LayoutDashboard className="w-4 h-4 text-orange-500" />
+                      <span>Dashboard Quản Trị</span>
+                    </div>
+                    <span className="text-[9px] font-black px-1.5 py-0.2 bg-orange-100 text-orange-600 rounded">
+                      Admin
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <a
               href="#lien-he"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 text-base font-semibold text-slate-700 hover:bg-slate-50 rounded-lg"
+              className="block px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl"
             >
               Liên hệ
             </a>
 
-            <div className="pt-2 space-y-2">
+            <div className="pt-2 space-y-2 border-t border-slate-100">
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   handleGeneralModalOpen();
                 }}
-                className="w-full py-3 text-center text-sm font-bold text-white bg-orange-500 rounded-xl shadow-md"
+                className="w-full py-3 text-center text-sm font-bold text-white bg-orange-500 rounded-xl shadow-md cursor-pointer"
               >
                 Đăng ký Test Năng Lực Miễn Phí
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setIsAdminView(true);
-                }}
-                className="w-full py-2.5 text-center text-xs font-bold text-slate-700 bg-slate-100 rounded-xl flex items-center justify-center gap-1.5"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 text-[#1e3a8a]" />
-                <span>Mở Bảng Quản Trị (Admin Dashboard)</span>
               </button>
             </div>
           </div>
