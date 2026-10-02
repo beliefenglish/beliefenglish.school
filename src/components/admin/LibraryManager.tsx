@@ -13,6 +13,8 @@ import {
   RotateCcw,
   CheckCircle,
   X,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { useAdmin, LibraryFolder, LibraryBookItem } from '../../context/AdminContext';
 
@@ -27,6 +29,8 @@ export default function LibraryManager() {
     updateBook,
     deleteBook,
     resetLibrary,
+    saveAllToCloud,
+    isSyncing,
   } = useAdmin();
 
   const [activeFolderId, setActiveFolderId] = useState<string>(
@@ -168,6 +172,19 @@ export default function LibraryManager() {
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Khôi Phục Gốc</span>
+          </button>
+
+          <button
+            onClick={async () => {
+              const res = await saveAllToCloud();
+              showToast(res.message || 'Đã lưu thư viện sách thành công!');
+            }}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
+            title="Lưu toàn bộ thư viện sách lên Vercel Cloud"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{isSyncing ? 'Đang Lưu...' : 'Lưu Thư Viện Sách'}</span>
           </button>
 
           <button

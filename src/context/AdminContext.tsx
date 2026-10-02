@@ -99,6 +99,11 @@ interface AdminContextType {
   updateBook: (id: string, updated: Partial<LibraryBookItem>) => void;
   deleteBook: (id: string) => void;
   resetLibrary: () => void;
+  // Cloud Sync & Blob Actions
+  isSyncing: boolean;
+  lastSyncedAt: string | null;
+  saveAllToCloud: () => Promise<{ success: boolean; message: string; blobUrl?: string }>;
+  uploadMediaFile: (file: File) => Promise<{ url: string }>;
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
@@ -693,6 +698,80 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('belis_books');
   };
 
+  // Cloud Sync & Storage States
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+
+  // Upload file to Vercel Blob via API
+  const uploadMediaFile = async (file: File): Promise<{ url: string }> => {
+    const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const response = await fetch(`/api/upload?filename=${encodeURIComponent(filename)}`, {
+      method: 'POST',
+      body: file,
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Lỗi khi tải ảnh lên máy chủ Vercel Blob');
+    }
+
+    const result = await response.json();
+    return { url: result.url };
+  };
+
+  // Save all site data to Vercel Cloud (/api/content with Blob and KV persistence)
+  const saveAllToCloud = async (): Promise<{ success: boolean; message: string; blobUrl?: string }> => {
+    setIsSyncing(true);
+    try {
+      const payload = {
+        brand: {
+          name: siteSettings.companyName,
+          phone: siteSettings.hotline1,
+          email: siteSettings.email,
+          address: siteSettings.address,
+          logoUrl: siteMedia.customLogoBlue || siteMedia.customLogoCircle || siteMedia.customLogoWhite || '',
+          facebookUrl: 'https://facebook.com/beliefenglish',
+        },
+        settings: siteSettings,
+        courses,
+        media: siteMedia,
+        libraryFolders,
+        libraryBooks,
+        leads,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const res = await fetch('/api/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Lỗi kết nối máy chủ lưu trữ');
+      }
+
+      const resData = await res.json();
+      const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setLastSyncedAt(timeStr);
+
+      return {
+        success: true,
+        message: 'Đã lưu và đồng bộ toàn bộ dữ liệu lên hệ thống Vercel Cloud thành công!',
+        blobUrl: resData.blobUrl,
+      };
+    } catch (e: any) {
+      console.warn('Sync to cloud error:', e);
+      return {
+        success: false,
+        message: e.message || 'Lỗi khi lưu dữ liệu lên đám mây',
+      };
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <AdminContext.Provider
       value={{
@@ -728,6 +807,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         updateBook,
         deleteBook,
         resetLibrary,
+        isSyncing,
+        lastSyncedAt,
+        saveAllToCloud,
+        uploadMediaFile,
       }}
     >
       {children}

@@ -11,14 +11,17 @@ import {
   Gift,
   X,
   Sparkles,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { CourseItem } from '../../data/coursesData';
 
 export default function CoursesManager() {
-  const { courses, updateCourse, addCourse, deleteCourse, resetCourses } = useAdmin();
+  const { courses, updateCourse, addCourse, deleteCourse, resetCourses, saveAllToCloud, isSyncing } = useAdmin();
   const [editingCourse, setEditingCourse] = useState<CourseItem | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
 
   // Form state for editing or creating
   const [formData, setFormData] = useState<Partial<CourseItem>>({});
@@ -28,11 +31,14 @@ export default function CoursesManager() {
     setFormData({ ...course });
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse || !formData.name) return;
     updateCourse(editingCourse.id, formData);
     setEditingCourse(null);
+    await saveAllToCloud();
+    setToastMsg('Đã cập nhật và lưu khóa học thành công!');
+    setTimeout(() => setToastMsg(''), 3000);
   };
 
   const handleStartAdd = () => {
@@ -54,11 +60,20 @@ export default function CoursesManager() {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveAdd = (e: React.FormEvent) => {
+  const handleSaveAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.id) return;
     addCourse(formData as CourseItem);
     setIsAddModalOpen(false);
+    await saveAllToCloud();
+    setToastMsg('Đã thêm và lưu khóa học mới vào hệ thống!');
+    setTimeout(() => setToastMsg(''), 3000);
+  };
+
+  const handleManualSave = async () => {
+    const res = await saveAllToCloud();
+    setToastMsg(res.message || 'Đã lưu danh sách khóa học thành công!');
+    setTimeout(() => setToastMsg(''), 3000);
   };
 
   return (
@@ -88,6 +103,16 @@ export default function CoursesManager() {
           </button>
 
           <button
+            onClick={handleManualSave}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
+            title="Lưu danh sách khóa học lên Vercel Blob & KV"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{isSyncing ? 'Đang Lưu...' : 'Lưu Khóa Học'}</span>
+          </button>
+
+          <button
             onClick={handleStartAdd}
             className="px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
           >
@@ -96,6 +121,14 @@ export default function CoursesManager() {
           </button>
         </div>
       </div>
+
+      {/* Toast Feedback */}
+      {toastMsg && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
       {/* Courses List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -7,20 +7,31 @@ import {
   Sparkles,
   Trash2,
   ExternalLink,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import BeliefLogo from '../BeliefLogo';
 
 export default function MediaManager() {
-  const { siteMedia, updateLogo, updateCategoryImage, resetMedia } = useAdmin();
+  const {
+    siteMedia,
+    updateLogo,
+    updateCategoryImage,
+    resetMedia,
+    uploadMediaFile,
+    saveAllToCloud,
+    isSyncing,
+  } = useAdmin();
   const [successToast, setSuccessToast] = useState('');
+  const [isUploading, setIsUploading] = useState<string | null>(null);
 
   const triggerToast = (msg: string) => {
     setSuccessToast(msg);
-    setTimeout(() => setSuccessToast(''), 3000);
+    setTimeout(() => setSuccessToast(''), 4000);
   };
 
-  const handleFileUpload = (
+  const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     type: 'blue' | 'white' | 'circle' | string,
     isCategory: boolean = false
@@ -28,23 +39,55 @@ export default function MediaManager() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Vui lòng chọn hình ảnh có dung lượng dưới 5MB.');
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Vui lòng chọn hình ảnh có dung lượng dưới 8MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      if (isCategory) {
-        updateCategoryImage(type, result);
-        triggerToast(`Đã tải lên hình ảnh cho danh mục: ${type}`);
-      } else {
-        updateLogo(type as 'blue' | 'white' | 'circle', result);
-        triggerToast(`Đã cập nhật Logo (${type}) thành công!`);
+    try {
+      setIsUploading(type);
+      // Attempt upload to Vercel Blob via API
+      try {
+        const { url } = await uploadMediaFile(file);
+        if (url) {
+          if (isCategory) {
+            updateCategoryImage(type, url);
+            triggerToast(`Đã tải lên Vercel Blob cho danh mục: ${type}`);
+          } else {
+            updateLogo(type as 'blue' | 'white' | 'circle', url);
+            triggerToast(`Đã lưu Logo (${type}) lên Vercel Blob Storage!`);
+          }
+          await saveAllToCloud();
+          return;
+        }
+      } catch (uploadErr) {
+        console.warn('API upload fallback to local DataURL:', uploadErr);
       }
-    };
-    reader.readAsDataURL(file);
+
+      // Fallback to local DataURL
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const result = reader.result as string;
+        if (isCategory) {
+          updateCategoryImage(type, result);
+          triggerToast(`Đã lưu ảnh cục bộ cho danh mục: ${type}`);
+        } else {
+          updateLogo(type as 'blue' | 'white' | 'circle', result);
+          triggerToast(`Đã lưu Logo (${type}) thành công!`);
+        }
+        await saveAllToCloud();
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      alert(`Lỗi khi tải ảnh: ${err.message}`);
+    } finally {
+      setIsUploading(null);
+    }
+  };
+
+  const handleManualSave = async () => {
+    const res = await saveAllToCloud();
+    triggerToast(res.message || 'Đã lưu cấu hình hình ảnh thành công!');
   };
 
   const categoryList = [
@@ -72,18 +115,30 @@ export default function MediaManager() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            if (window.confirm('Khôi phục toàn bộ hình ảnh và logo về mặc định?')) {
-              resetMedia();
-              triggerToast('Đã đặt lại hình ảnh mặc định');
-            }
-          }}
-          className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Khôi Phục Mặc Định</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => {
+              if (window.confirm('Khôi phục toàn bộ hình ảnh và logo về mặc định?')) {
+                resetMedia();
+                triggerToast('Đã đặt lại hình ảnh mặc định');
+              }
+            }}
+            className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Khôi Phục Mặc Định</span>
+          </button>
+
+          <button
+            onClick={handleManualSave}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
+            title="Lưu cấu hình hình ảnh vào Vercel Cloud"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{isSyncing ? 'Đang Lưu...' : 'Lưu Hình Ảnh & Logo'}</span>
+          </button>
+        </div>
       </div>
 
       {successToast && (

@@ -16,13 +16,29 @@ import {
   Edit,
   X,
   UserCheck,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { useAdmin, LeadItem } from '../../context/AdminContext';
 
 export default function LeadsManager() {
-  const { leads, updateLeadStatus, deleteLead, exportLeadsCSV, addLead } = useAdmin();
+  const {
+    leads,
+    updateLeadStatus,
+    deleteLead,
+    exportLeadsCSV,
+    addLead,
+    saveAllToCloud,
+    isSyncing,
+  } = useAdmin();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [toastMsg, setToastMsg] = useState('');
+
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 3000);
+  };
   const [selectedLead, setSelectedLead] = useState<LeadItem | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [adminNoteInput, setAdminNoteInput] = useState('');
@@ -200,6 +216,19 @@ export default function LeadsManager() {
           </div>
 
           <button
+            onClick={async () => {
+              const res = await saveAllToCloud();
+              triggerToast(res.message || 'Đã lưu danh sách học viên thành công!');
+            }}
+            disabled={isSyncing}
+            className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
+            title="Lưu dữ liệu học viên lên Vercel Cloud"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{isSyncing ? 'Đang Lưu...' : 'Lưu Danh Sách'}</span>
+          </button>
+
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2.5 rounded-xl bg-[#1e3a8a] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-blue-900 transition-colors cursor-pointer"
           >
@@ -216,6 +245,14 @@ export default function LeadsManager() {
           </button>
         </div>
       </div>
+
+      {/* Toast */}
+      {toastMsg && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
       {/* Leads Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">

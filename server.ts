@@ -89,6 +89,93 @@ Formatting & Tone:
     }
   });
 
+  // In-memory / cached site content fallback
+  let cachedContent: any = null;
+
+  // GET /api/content
+  app.get('/api/content', async (_req, res) => {
+    try {
+      res.setHeader('Cache-Control', 'no-store');
+      if (cachedContent) {
+        return res.json(cachedContent);
+      }
+      return res.json({ success: true, message: 'Dữ liệu khởi tạo' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/content
+  app.post('/api/content', async (req, res) => {
+    try {
+      const payload = {
+        ...req.body,
+        updatedAt: new Date().toISOString(),
+      };
+      cachedContent = payload;
+
+      let blobResult: any = null;
+      try {
+        const { put } = await import('@vercel/blob');
+        const storeId = process.env.beliefenglish_STORE_ID || process.env.BLOB_STORE_ID;
+        blobResult = await put('articles/site-content.json', JSON.stringify(payload), {
+          access: 'public',
+          addRandomSuffix: false,
+          ...(storeId ? { storeId } : {}),
+        });
+      } catch (blobErr: any) {
+        console.warn('Vercel Blob in local server:', blobErr.message);
+      }
+
+      res.json({
+        success: true,
+        data: payload,
+        blobUrl: blobResult?.url || null,
+        message: 'Đã lưu cấu hình thành công!',
+      });
+    } catch (err: any) {
+      console.error('Error saving in /api/content:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /api/upload
+  app.post('/api/upload', express.raw({ type: '*/*', limit: '15mb' }), async (req, res) => {
+    try {
+      const filename = (req.query.filename as string) || `upload-${Date.now()}`;
+      let blobResult: any = null;
+
+      try {
+        const { put } = await import('@vercel/blob');
+        const storeId = process.env.beliefenglish_STORE_ID || process.env.BLOB_STORE_ID;
+        blobResult = await put(filename, req.body, {
+          access: 'public',
+          ...(storeId ? { storeId } : {}),
+        });
+      } catch (blobErr: any) {
+        console.warn('Vercel Blob upload in local server:', blobErr.message);
+      }
+
+      if (blobResult?.url) {
+        return res.json(blobResult);
+      }
+
+      // Fallback base64 url if no Vercel Blob token in local dev
+      const mimeType = (req.headers['content-type'] as string) || 'image/png';
+      const base64Data = Buffer.isBuffer(req.body)
+        ? `data:${mimeType};base64,${req.body.toString('base64')}`
+        : '';
+      return res.json({
+        url: base64Data || `https://via.placeholder.com/300?text=${encodeURIComponent(filename)}`,
+        pathname: filename,
+        contentType: mimeType,
+      });
+    } catch (err: any) {
+      console.error('Error in /api/upload:', err);
+      res.status(500).json({ error: err.message || 'Lỗi tải ảnh lên server' });
+    }
+  });
+
   if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },

@@ -9,6 +9,7 @@ import {
   Phone,
   Calendar,
   CheckCircle,
+  AlertCircle,
   Clock,
   TrendingUp,
   Award,
@@ -19,6 +20,8 @@ import {
   Key,
   ShieldCheck,
   X,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import BeliefLogo from '../BeliefLogo';
 import LeadsManager from './LeadsManager';
@@ -38,6 +41,9 @@ export default function AdminDashboard() {
     leads,
     courses,
     libraryBooks,
+    isSyncing,
+    lastSyncedAt,
+    saveAllToCloud,
   } = useAdmin();
 
   const [activeTab, setActiveTab] = useState<'leads' | 'courses' | 'media' | 'library' | 'settings'>('leads');
@@ -45,6 +51,19 @@ export default function AdminDashboard() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [pwdMsg, setPwdMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string; blobUrl?: string } | null>(null);
+
+  const handleCloudSave = async () => {
+    const res = await saveAllToCloud();
+    setSaveStatus({
+      type: res.success ? 'success' : 'error',
+      message: res.message,
+      blobUrl: res.blobUrl,
+    });
+    setTimeout(() => {
+      setSaveStatus(null);
+    }, 5000);
+  };
 
   // If not logged in, show Login Screen
   if (!adminAuth.isAuthenticated) {
@@ -90,13 +109,32 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Right Action Controls: Owner Email, Password, Logout, Return */}
-            <div className="flex items-center gap-2.5">
+            {/* Right Action Controls: Save Button, Owner Email, Password, Logout, Return */}
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              {/* PRIMARY SAVE BUTTON */}
+              <button
+                onClick={handleCloudSave}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg hover:shadow-orange-500/25 active:scale-95 disabled:opacity-50 transition-all cursor-pointer border border-amber-300/30"
+                title="Lưu toàn bộ dữ liệu vào Vercel Blob & KV Database"
+              >
+                {isSyncing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>{isSyncing ? 'Đang Lưu...' : 'Lưu Thay Đổi'}</span>
+              </button>
+
               {/* Owner Email Pill */}
               <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-950/60 border border-blue-700 text-xs text-blue-100">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="font-semibold">{adminAuth.email}</span>
-                <span className="text-[10px] text-orange-300 font-bold">(Chủ sở hữu)</span>
+                {lastSyncedAt && (
+                  <span className="text-[10px] text-emerald-300 font-mono pl-1">
+                    • Lưu lúc {lastSyncedAt}
+                  </span>
+                )}
               </div>
 
               {/* Change Password Button */}
@@ -131,6 +169,41 @@ export default function AdminDashboard() {
           </div>
         </div>
       </header>
+
+      {/* Cloud Save Notification Bar */}
+      {saveStatus && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 w-full">
+          <div
+            className={`p-4 rounded-2xl flex items-center justify-between gap-3 shadow-md border ${
+              saveStatus.type === 'success'
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                : 'bg-red-50 border-red-300 text-red-900'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {saveStatus.type === 'success' ? (
+                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+              )}
+              <div>
+                <span className="text-xs sm:text-sm font-bold block">{saveStatus.message}</span>
+                {saveStatus.blobUrl && (
+                  <span className="text-[11px] text-emerald-700 underline truncate block mt-0.5">
+                    Tệp lưu trữ: {saveStatus.blobUrl}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setSaveStatus(null)}
+              className="text-xs font-bold px-2 py-1 rounded-lg hover:bg-black/5 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Body with Tab Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">

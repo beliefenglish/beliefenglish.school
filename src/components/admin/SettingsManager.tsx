@@ -10,25 +10,27 @@ import {
   Save,
   RotateCcw,
   CheckCircle,
+  Loader2,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 
 export default function SettingsManager() {
-  const { siteSettings, updateSiteSettings, resetSiteSettings } = useAdmin();
+  const { siteSettings, updateSiteSettings, resetSiteSettings, saveAllToCloud, isSyncing } = useAdmin();
   const [formState, setFormState] = useState({ ...siteSettings });
   const [showSavedToast, setShowSavedToast] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     updateSiteSettings(formState);
+    await saveAllToCloud();
     setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 3000);
+    setTimeout(() => setShowSavedToast(false), 4000);
   };
 
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-black text-[#1e3a8a]">
             Cài Đặt Website & Kênh Liên Hệ
@@ -38,25 +40,37 @@ export default function SettingsManager() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm('Khôi phục toàn bộ cài đặt về mặc định?')) {
-              resetSiteSettings();
-              setFormState(siteSettings);
-            }
-          }}
-          className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          <span>Mặc Định</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Khôi phục toàn bộ cài đặt về mặc định?')) {
+                resetSiteSettings();
+                setFormState(siteSettings);
+              }
+            }}
+            className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Mặc Định</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{isSyncing ? 'Đang Lưu...' : 'Lưu Cài Đặt'}</span>
+          </button>
+        </div>
       </div>
 
       {showSavedToast && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Đã lưu cài đặt thành công! Dữ liệu đã được cập nhật trực tiếp trên website.</span>
+          <span>Đã lưu cài đặt website thành công và đồng bộ lên hệ thống Vercel Cloud!</span>
         </div>
       )}
 

@@ -20,8 +20,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const storeId = process.env.beliefenglish_STORE_ID || process.env.BLOB_STORE_ID;
+
     const blob = await put(filename, request.body, {
       access: 'public',
+      ...(storeId ? { storeId } : {}),
     });
 
     return NextResponse.json(blob);
